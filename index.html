@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกรายรับ-รายจ่าย & จัดการสต็อก แม่นา</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        prompt: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        snack: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            pink: '#f472b6',
+                            rose: '#fb7185',
+                            cream: '#fffdf5',
+                            dark: '#451a03'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #fffaf0;
+            color: #431407;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fef3c7;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 9999px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+        }
+        .toast-animate {
+            animation: slideIn 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55) forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-10">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-gradient-to-r from-amber-500 via-orange-400 to-rose-400 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2.5 rounded-2xl backdrop-blur-sm shadow-inner flex items-center justify-center">
+                    <svg class="w-7 h-7 text-yellow-200 fill-current" viewBox="0 0 512 512"><path d="M257.8 80c-51.3 0-98 18.2-134.7 48.6C122.5 125.7 120 123 120 120c0-13.3 10.7-24 24-24h32c13.3 0 24-10.7 24-24S189.3 48 176 48H144C104.3 48 72 80.3 72 120c0 8.8 1.6 17.2 4.5 25C30.6 182.2 0 238.4 0 304c0 114.9 93.1 208 208 208c90.4 0 167.3-57.6 195.6-138.1 48-18 84.4-60.6 92.4-112.9 3.2-20.9-12.7-39-33.8-39h-10.8c-12 0-22.3-8.2-25.1-19.9-10.8-45.7-48.4-81.5-95.2-90.8C318 97.4 289.4 80 257.8 80zM128 304a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm192-64a32 32 0 1 1 0 64 32 32 0 1 1 0-64zm-80 128a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+                        แม่นา <span class="text-xs bg-amber-200/30 px-2 py-0.5 rounded-full font-normal">POS & Stock</span>
+                    </h1>
+                    <p class="text-xs text-amber-100 font-light">ระบบบันทึกรายรับ-รายจ่าย & บริหารคลังขนมถุง</p>
+                </div>
+            </div>
+            <!-- Live Clock & Reset Button -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-black/15 px-4 py-1.5 rounded-full text-sm font-medium border border-white/20 shadow-sm">
+                    <svg class="w-4 h-4 text-yellow-300 fill-current animate-pulse" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4.5 15.5 11.5 19.5l120 70c11.5 6.7 26.2 2.8 32.9-8.7s2.8-26.2-8.7-32.9L280 242.8V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></svg>
+                    <span id="liveClock" class="tracking-wide">00:00:00, 01/01/2026</span>
+                </div>
+                <button onclick="clearAllDataConfirm()" title="ล้างข้อมูลทั้งหมด" class="bg-rose-500/80 hover:bg-rose-600 text-white text-xs px-3 py-1.5 rounded-full border border-white/20 shadow-sm transition-all flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>
+                    ล้างข้อมูล
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-grow w-full space-y-6">
+
+        <!-- 1. Dashboard Overview Section -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Net Profit Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-emerald-500 relative overflow-hidden">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-700">กำไร / คงเหลือสุทธิ</p>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1" id="dashNetProfit">฿0.00</h3>
+                        <p class="text-xs text-slate-500 mt-1">คำนวณจาก รายรับ - รายจ่าย</p>
+                    </div>
+                    <div class="bg-emerald-100 text-emerald-600 p-3 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 512 512"><path d="M64 32C28.7 32 0 60.7 0 96V416c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V192c0-35.3-28.7-64-64-64H80c-8.8 0-16-7.2-16-16s7.2-16 16-16H448c17.7 0 32-14.3 32-32s-14.3-32-32-32H64zM416 272a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Revenue Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-amber-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">รายรับรวม (ยอดขาย)</p>
+                        <h3 class="text-2xl font-bold text-amber-600 mt-1" id="dashTotalIncome">฿0.00</h3>
+                        <p class="text-xs text-slate-500 mt-1" id="dashIncomeSub">เงินสด ฿0.00 | โอน ฿0.00</p>
+                    </div>
+                    <div class="bg-amber-100 text-amber-600 p-3 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 384 512"><path d="M169.4 470.6c12.5 12.5 32.8 12.5 45.3 0l160-160c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L224 370.8V64c0-17.7-14.3-32-32-32s-32 14.3-32 32V370.8L55.3 265.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l160 160z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Expense Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-rose-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-rose-700">รายจ่ายรวม (ต้นทุน)</p>
+                        <h3 class="text-2xl font-bold text-rose-600 mt-1" id="dashTotalExpense">฿0.00</h3>
+                        <p class="text-xs text-slate-500 mt-1">ซื้อวัตถุดิบ / เติมสต็อก</p>
+                    </div>
+                    <div class="bg-rose-100 text-rose-600 p-3 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 384 512"><path d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2l104.7 104.7c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"/></svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Warning Card -->
+            <div class="glass-card rounded-2xl p-5 shadow-sm hover:shadow-md transition-all border-l-4 border-orange-500">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-orange-700">เตือนสต็อกใกล้หมด</p>
+                        <h3 class="text-2xl font-bold text-orange-600 mt-1" id="dashLowStockCount">0 รายการ</h3>
+                        <p class="text-xs text-slate-500 mt-1">เหลือน้อยกว่า 5 ถุง</p>
+                    </div>
+                    <div class="bg-orange-100 text-orange-600 p-3 rounded-xl relative flex items-center justify-center">
+                        <svg class="w-6 h-6 fill-current" viewBox="0 0 576 512"><path d="M248 0H208c-26.5 0-48 21.5-48 48V160c0 26.5 21.5 48 48 48h40c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48zm128 0H336c-26.5 0-48 21.5-48 48V160c0 26.5 21.5 48 48 48h40c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48zM0 304c0 26.5 21.5 48 48 48H528c26.5 0 48-21.5 48-48s-21.5-48-48-48H48c-26.5 0-48 21.5-48 48zm48 96c-26.5 0-48 21.5-48 48s21.5 48 48 48H528c26.5 0 48-21.5 48-48s-21.5-48-48-48H48z"/></svg>
+                        <span id="lowStockBadge" class="hidden absolute -top-1 -right-1 flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Transaction Form & Snack Inventory Header -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Left Panel: Transaction Entry Form -->
+            <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-amber-100 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 512 512"><path d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V416c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"/></svg>
+                            บันทึกรายการประจำวัน
+                        </h2>
+                        <button onclick="openAddSnackModal()" class="text-xs bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-sm">
+                            <svg class="w-3.5 h-3.5 text-amber-600 fill-current" viewBox="0 0 448 512"><path d="M256 80c0-13.3-10.7-24-24-24s-24 10.7-24 24V232H48c-13.3 0-24 10.7-24 24s10.7 24 24 24H208V432c0 13.3 10.7 24 24 24s24-10.7 24-24V280H400c13.3 0 24-10.7 24-24s-10.7-24-24-24H256V80z"/></svg>
+                            เพิ่มชนิดขนมใหม่
+                        </button>
+                    </div>
+
+                    <!-- Type Selector -->
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-amber-50 rounded-xl mb-4">
+                        <button type="button" id="typeIncomeBtn" onclick="setTransactionType('income')" class="py-2 px-3 rounded-lg text-sm font-semibold transition-all shadow-sm bg-emerald-500 text-white">
+                            🛒 รายรับ (ขายขนม)
+                        </button>
+                        <button type="button" id="typeExpenseBtn" onclick="setTransactionType('expense')" class="py-2 px-3 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:bg-white/50">
+                            🚚 รายจ่าย (เติมสต็อก)
+                        </button>
+                    </div>
+
+                    <form id="transactionForm" onsubmit="handleTransactionSubmit(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่รายการ</label>
+                            <input type="datetime-local" id="txDateTime" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เลือกรายการขนม</label>
+                            <select id="txSnackId" onchange="calculateFormTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm bg-white">
+                                <option value="">-- กรุณาเลือกขนม --</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1" id="txQtyLabel">จำนวน (ถุง)</label>
+                                <input type="number" id="txQty" min="1" value="1" oninput="calculateFormTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาต่อหน่วย (บาท)</label>
+                                <input type="number" id="txUnitPrice" step="0.5" min="0" oninput="calculateFormTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm bg-amber-50/50">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 items-center">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">ช่องทางรับ/ชำระเงิน</label>
+                                <select id="txPaymentMethod" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm bg-white">
+                                    <option value="เงินสด">💵 เงินสด</option>
+                                    <option value="โอนเงิน">📱 โอนเงิน</option>
+                                </select>
+                            </div>
+                            <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-right">
+                                <span class="text-xs text-amber-700 block font-medium">ราคารวมทั้งสิ้น</span>
+                                <span id="txTotalAmountDisplay" class="text-xl font-bold text-amber-800">฿0.00</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ (ถ้ามี)</label>
+                            <input type="text" id="txNote" placeholder="เช่น ลูกค้าประจำ, ซื้อยกลัง ฯลฯ" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none text-sm">
+                        </div>
+
+                        <button type="submit" id="txSubmitBtn" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2">
+                            ✓ บันทึกรายการรายรับ (ขายขนม)
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Panel: Inventory Management -->
+            <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-amber-100 flex flex-col">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 576 512"><path d="M248 0H208c-26.5 0-48 21.5-48 48V160c0 26.5 21.5 48 48 48h40c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48zm128 0H336c-26.5 0-48 21.5-48 48V160c0 26.5 21.5 48 48 48h40c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48zM0 304c0 26.5 21.5 48 48 48H528c26.5 0 48-21.5 48-48s-21.5-48-48-48H48c-26.5 0-48 21.5-48 48zm48 96c-26.5 0-48 21.5-48 48s21.5 48 48 48H528c26.5 0 48-21.5 48-48s-21.5-48-48-48H48z"/></svg>
+                            คลังสินค้าคงเหลือปัจจุบัน
+                        </h2>
+                        <p class="text-xs text-slate-500">สต็อกขนมทั้งหมดในร้านและสถานะพร้อมขาย</p>
+                    </div>
+                    <span id="stockSummaryPill" class="text-xs font-semibold px-3 py-1 bg-amber-100 text-amber-800 rounded-full">
+                        รวม 0 ชนิด
+                    </span>
+                </div>
+
+                <!-- Stock Cards Grid Container -->
+                <div id="snackInventoryGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 overflow-y-auto max-h-[420px] p-1">
+                    <!-- Empty State Rendered dynamically when no snacks exist -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Transaction History Table -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm border border-amber-100 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 512 512"><path d="M64 48C28.7 48 0 76.7 0 112V400c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V112c0-35.3-28.7-64-64-64H64zM216 168h160c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 96h160c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zm0 96h160c13.3 0 24 10.7 24 24s-10.7 24-24 24H216c-13.3 0-24-10.7-24-24s10.7-24 24-24zM136 176a24 24 0 1 1 -48 0 24 24 0 1 1 48 0zm-24 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm24 72a24 24 0 1 1 -48 0 24 24 0 1 1 48 0z"/></svg>
+                        ประวัติรายการบันทึก
+                    </h2>
+                    <p class="text-xs text-slate-500">ตรวจสอบ แก้ไข หรือลบรายการย้อนหลัง</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <!-- Copy LINE Summary Button -->
+                    <button onclick="copyLineSummary()" class="px-3.5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+                        📱 ส่งสรุปยอดเข้า LINE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters & Search Bar -->
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-amber-50/60 p-3 rounded-xl border border-amber-100">
+                <div class="sm:col-span-5 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                    <svg class="w-4 h-4 text-slate-400 fill-current" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0s208 93.1 208 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></svg>
+                    <input type="text" id="searchInput" oninput="renderHistoryTable()" placeholder="ค้นหาชื่อขนม หรือ หมายเหตุ..." class="w-full text-xs outline-none bg-transparent">
+                </div>
+                <div class="sm:col-span-4 flex items-center gap-2">
+                    <span class="text-xs font-medium text-slate-600 whitespace-nowrap">กรองประเภท:</span>
+                    <select id="filterType" onchange="renderHistoryTable()" class="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white outline-none">
+                        <option value="all">ทั้งหมด</option>
+                        <option value="income">เฉพาะรายรับ (ขาย)</option>
+                        <option value="expense">เฉพาะรายจ่าย (เติมสต็อก)</option>
+                    </select>
+                </div>
+                <div class="sm:col-span-3 text-right flex items-center justify-end text-xs text-slate-500">
+                    <span id="filteredCountText">แสดง 0 รายการ</span>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-amber-100/70 text-amber-900 font-semibold border-b border-amber-200">
+                        <tr>
+                            <th class="py-3 px-4">วัน-เวลา</th>
+                            <th class="py-3 px-4">ประเภท</th>
+                            <th class="py-3 px-4">รายการขนม</th>
+                            <th class="py-3 px-4 text-right">จำนวน</th>
+                            <th class="py-3 px-4 text-right">ราคา/หน่วย</th>
+                            <th class="py-3 px-4 text-right">ยอดเงินรวม</th>
+                            <th class="py-3 px-4">ช่องทาง / หมายเหตุ</th>
+                            <th class="py-3 px-4 text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody" class="divide-y divide-slate-100 bg-white">
+                        <!-- Dynamic history rows -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. Monthly Statistics & Charts Section -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm border border-amber-100 space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-500 fill-current" viewBox="0 0 544 512"><path d="M224 32c0-17.7 14.3-32 32-32C396.7 0 512 115.3 512 256c0 17.7-14.3 32-32 32H256c-17.7 0-32-14.3-32-32V32zM0 288c0-141.4 114.6-256 256-256v256H512c0 141.4-114.6 256-256 256S0 429.4 0 288z"/></svg>
+                        สถิตียอดขายประจำเดือน & วิเคราะห์
+                    </h2>
+                    <p class="text-xs text-slate-500">สัดส่วนสินค้าขายดี และสรุปยอดขายแยกรายเดือน</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-600">เลือกเดือน/ปี:</label>
+                    <select id="monthlySelect" onchange="renderMonthlyStats()" class="text-xs px-3 py-2 border border-slate-200 rounded-xl bg-amber-50/50 font-medium outline-none">
+                    </select>
+                </div>
+            </div>
+
+            <!-- Monthly Summary Cards Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-200">
+                    <span class="text-[11px] font-medium text-amber-700 block">ยอดขายรวม</span>
+                    <span id="mIncomeTotal" class="text-base font-bold text-amber-800">฿0.00</span>
+                </div>
+                <div class="bg-emerald-50 p-3.5 rounded-xl border border-emerald-200">
+                    <span class="text-[11px] font-medium text-emerald-700 block">รับเงินสด</span>
+                    <span id="mCashTotal" class="text-base font-bold text-emerald-800">฿0.00</span>
+                </div>
+                <div class="bg-sky-50 p-3.5 rounded-xl border border-sky-200">
+                    <span class="text-[11px] font-medium text-sky-700 block">รับเงินโอน</span>
+                    <span id="mTransferTotal" class="text-base font-bold text-sky-800">฿0.00</span>
+                </div>
+                <div class="bg-rose-50 p-3.5 rounded-xl border border-rose-200">
+                    <span class="text-[11px] font-medium text-rose-700 block">รายจ่าย (ต้นทุน)</span>
+                    <span id="mExpenseTotal" class="text-base font-bold text-rose-800">฿0.00</span>
+                </div>
+                <div class="bg-indigo-50 p-3.5 rounded-xl border border-indigo-200 col-span-2 md:col-span-1">
+                    <span class="text-[11px] font-medium text-indigo-700 block">กำไรสุทธิ</span>
+                    <span id="mNetProfit" class="text-base font-bold text-indigo-800">฿0.00</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <!-- Doughnut Chart Container -->
+                <div class="md:col-span-6 flex flex-col items-center justify-center bg-slate-50/60 p-4 rounded-xl border border-slate-100">
+                    <h3 class="text-xs font-bold text-slate-700 mb-2">สัดส่วนยอดขายรายรับแยกตามขนม</h3>
+                    <div class="w-full max-w-[280px] h-[260px] relative">
+                        <canvas id="salesDoughnutChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Selling Snacks List -->
+                <div class="md:col-span-6 space-y-3">
+                    <h3 class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        🏆 สินค้าขายดีประจำเดือน (ยอดถุงสูงสุด)
+                    </h3>
+                    <div id="topSellingList" class="space-y-2">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Add New Snack Item -->
+    <div id="addSnackModal" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-amber-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3 border-slate-100">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    🍪 เพิ่มชนิดขนมใหม่
+                </h3>
+                <button onclick="closeAddSnackModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <form id="addSnackForm" onsubmit="handleAddSnackSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">ชื่อขนม *</label>
+                    <input type="text" id="newSnackName" required placeholder="เช่น ทองพับกรอบ, เผือกทอด" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">ราคาขาย/ถุง (บาท) *</label>
+                        <input type="number" id="newSnackPrice" step="0.5" min="0" required placeholder="35" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">ราคาทุน/ถุง (บาท) *</label>
+                        <input type="number" id="newSnackCost" step="0.5" min="0" required placeholder="20" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">จำนวนสต็อกเริ่มต้น (ถุง)</label>
+                    <input type="number" id="newSnackStock" min="0" value="20" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeAddSnackModal()" class="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-sm">บันทึกขนมใหม่</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Transaction -->
+    <div id="editTxModal" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-amber-200 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3 border-slate-100">
+                <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                    ✏️ แก้ไขรายการบันทึก
+                </h3>
+                <button onclick="closeEditTxModal()" class="text-slate-400 hover:text-slate-600 font-bold">✕</button>
+            </div>
+            <form id="editTxForm" onsubmit="handleEditTxSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="editTxId">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">วัน-เวลา</label>
+                    <input type="datetime-local" id="editTxDateTime" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">รายการขนม</label>
+                    <select id="editTxSnackId" onchange="calcEditTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none bg-white">
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">จำนวน (ถุง)</label>
+                        <input type="number" id="editTxQty" min="1" oninput="calcEditTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">ราคาต่อหน่วย (บาท)</label>
+                        <input type="number" id="editTxUnitPrice" step="0.5" min="0" oninput="calcEditTotal()" required class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 items-center">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">ช่องทางชำระเงิน</label>
+                        <select id="editTxPaymentMethod" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none bg-white">
+                            <option value="เงินสด">💵 เงินสด</option>
+                            <option value="โอนเงิน">📱 โอนเงิน</option>
+                        </select>
+                    </div>
+                    <div class="bg-amber-50 p-2 rounded-xl text-right">
+                        <span class="text-[10px] text-slate-500 block">ยอดรวมใหม่</span>
+                        <span id="editTxTotalDisplay" class="text-base font-bold text-amber-800">฿0.00</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">หมายเหตุ</label>
+                    <input type="text" id="editTxNote" class="w-full px-3 py-2 border border-slate-200 rounded-xl outline-none">
+                </div>
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="closeEditTxModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold shadow-sm">บันทึกการแก้ไข</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Confirm Delete Item -->
+    <div id="deleteModal" class="fixed inset-0 z-50 bg-black/50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl border border-rose-200 text-center space-y-4">
+            <div class="w-14 h-14 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+                🗑️
+            </div>
+            <div>
+                <h3 class="font-bold text-slate-800 text-base">ยืนยันการลบรายการนี้?</h3>
+                <p class="text-xs text-slate-500 mt-1">ระบบจะทำการคำนวณคืน/ตัดสต็อกขนมให้อัตโนมัติทันที</p>
+            </div>
+            <input type="hidden" id="deleteTxTargetId">
+            <div class="flex justify-center gap-2 pt-2">
+                <button type="button" onclick="closeDeleteModal()" class="w-full py-2.5 bg-slate-100 text-slate-600 rounded-xl font-medium text-xs hover:bg-slate-200 transition-all">ยกเลิก</button>
+                <button type="button" onclick="executeDeleteTransaction()" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs shadow-md transition-all">ยืนยันลบรายการ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <script>
+        // CLEAN EMPTY DATA INITIALIZATION (No mock sample items)
+        let snacks = [];
+        let transactions = [];
+        let currentType = 'income'; // 'income' or 'expense'
+        let chartInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+            startLiveClock();
+            setTransactionType('income');
+            setDefaultDateTime();
+            refreshAllUI();
+        });
+
+        function loadInitialData() {
+            // Force reset old mock data if user requested clean state
+            const isCleanV2 = localStorage.getItem('snack_app_v2_clean');
+            if (!isCleanV2) {
+                localStorage.removeItem('snack_app_snacks');
+                localStorage.removeItem('snack_app_transactions');
+                localStorage.setItem('snack_app_v2_clean', 'true');
+            }
+
+            const storedSnacks = localStorage.getItem('snack_app_snacks');
+            const storedTx = localStorage.getItem('snack_app_transactions');
+
+            snacks = storedSnacks ? JSON.parse(storedSnacks) : [];
+            transactions = storedTx ? JSON.parse(storedTx) : [];
+        }
+
+        function clearAllDataConfirm() {
+            if (snacks.length === 0 && transactions.length === 0) {
+                showToast('ข้อมูลในระบบว่างอยู่อยู่แล้วครับ', 'info');
+                return;
+            }
+            if (window.confirm('คุณต้องการล้างข้อมูลขนมและประวัติบันทึกทั้งหมดใช่หรือไม่?')) {
+                snacks = [];
+                transactions = [];
+                saveSnacks();
+                saveTransactions();
+                showToast('ล้างข้อมูลทั้งหมดเรียบร้อยแล้ว', 'info');
+                refreshAllUI();
+            }
+        }
+
+        function saveSnacks() {
+            localStorage.setItem('snack_app_snacks', JSON.stringify(snacks));
+        }
+
+        function saveTransactions() {
+            localStorage.setItem('snack_app_transactions', JSON.stringify(transactions));
+        }
+
+        function startLiveClock() {
+            const updateClock = () => {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const mins = String(now.getMinutes()).padStart(2, '0');
+                const secs = String(now.getSeconds()).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const year = now.getFullYear();
+
+                document.getElementById('liveClock').textContent = `${hours}:${mins}:${secs}, ${day}/${month}/${year}`;
+            };
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function setDefaultDateTime() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('txDateTime').value = now.toISOString().slice(0, 16);
+        }
+
+        function formatCurrency(num) {
+            return '฿' + Number(num || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatDateTimeTh(dtStr) {
+            if (!dtStr) return '-';
+            const dt = new Date(dtStr);
+            const dateStr = dt.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = dt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            return `${dateStr} ${timeStr}`;
+        }
+
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-amber-600';
+
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-xs font-semibold toast-animate pointer-events-auto`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠️'}</span> <span>${message}</span>`;
+
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function refreshAllUI() {
+            populateSnackDropdowns();
+            renderDashboardOverview();
+            renderSnackInventory();
+            renderHistoryTable();
+            populateMonthDropdown();
+            renderMonthlyStats();
+        }
+
+        function renderDashboardOverview() {
+            let totalIncome = 0;
+            let totalCash = 0;
+            let totalTransfer = 0;
+            let totalExpense = 0;
+
+            transactions.forEach(tx => {
+                if (tx.type === 'income') {
+                    totalIncome += tx.total;
+                    if (tx.paymentMethod === 'เงินสด') totalCash += tx.total;
+                    else totalTransfer += tx.total;
+                } else if (tx.type === 'expense') {
+                    totalExpense += tx.total;
+                }
+            });
+
+            const netProfit = totalIncome - totalExpense;
+            const lowStockCount = snacks.filter(s => s.stock < 5).length;
+
+            document.getElementById('dashNetProfit').textContent = formatCurrency(netProfit);
+            document.getElementById('dashTotalIncome').textContent = formatCurrency(totalIncome);
+            document.getElementById('dashIncomeSub').textContent = `เงินสด ${formatCurrency(totalCash)} | โอน ${formatCurrency(totalTransfer)}`;
+            document.getElementById('dashTotalExpense').textContent = formatCurrency(totalExpense);
+            document.getElementById('dashLowStockCount').textContent = `${lowStockCount} รายการ`;
+
+            const badge = document.getElementById('lowStockBadge');
+            if (lowStockCount > 0) badge.classList.remove('hidden');
+            else badge.classList.add('hidden');
+        }
+
+        function setTransactionType(type) {
+            currentType = type;
+            const incomeBtn = document.getElementById('typeIncomeBtn');
+            const expenseBtn = document.getElementById('typeExpenseBtn');
+            const submitBtn = document.getElementById('txSubmitBtn');
+
+            if (type === 'income') {
+                incomeBtn.className = "py-2 px-3 rounded-lg text-sm font-semibold transition-all shadow-sm bg-emerald-500 text-white";
+                expenseBtn.className = "py-2 px-3 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:bg-white/50";
+                submitBtn.className = "w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2";
+                submitBtn.innerHTML = `✓ บันทึกรายการรายรับ (ขายขนม)`;
+            } else {
+                expenseBtn.className = "py-2 px-3 rounded-lg text-sm font-semibold transition-all shadow-sm bg-rose-500 text-white";
+                incomeBtn.className = "py-2 px-3 rounded-lg text-sm font-semibold transition-all text-slate-600 hover:bg-white/50";
+                submitBtn.className = "w-full py-3 bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2";
+                submitBtn.innerHTML = `✓ บันทึกรายการรายจ่าย (เติมสต็อก)`;
+            }
+
+            calculateFormTotal();
+        }
+
+        function populateSnackDropdowns() {
+            const select = document.getElementById('txSnackId');
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- กรุณาเลือกขนม --</option>';
+
+            snacks.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = `${s.name} (คงเหลือ: ${s.stock} ถุง)`;
+                select.appendChild(opt);
+            });
+
+            if (currentVal && snacks.some(s => s.id === currentVal)) {
+                select.value = currentVal;
+            }
+        }
+
+        function calculateFormTotal() {
+            const snackId = document.getElementById('txSnackId').value;
+            const qtyInput = document.getElementById('txQty');
+            const unitPriceInput = document.getElementById('txUnitPrice');
+            const totalDisplay = document.getElementById('txTotalAmountDisplay');
+
+            const snack = snacks.find(s => s.id === snackId);
+
+            if (snack) {
+                if (currentType === 'income') {
+                    unitPriceInput.value = snack.price;
+                } else {
+                    unitPriceInput.value = snack.cost;
+                }
+            }
+
+            const qty = parseFloat(qtyInput.value) || 0;
+            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+            const total = qty * unitPrice;
+
+            totalDisplay.textContent = formatCurrency(total);
+        }
+
+        function handleTransactionSubmit(e) {
+            e.preventDefault();
+
+            const snackId = document.getElementById('txSnackId').value;
+            const qty = parseInt(document.getElementById('txQty').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('txUnitPrice').value) || 0;
+            const paymentMethod = document.getElementById('txPaymentMethod').value;
+            const note = document.getElementById('txNote').value.trim();
+            const datetime = document.getElementById('txDateTime').value;
+
+            if (!snackId) {
+                showToast('กรุณาเลือกรายการขนมก่อนครับ', 'error');
+                return;
+            }
+
+            const snack = snacks.find(s => s.id === snackId);
+            if (!snack) return;
+
+            if (currentType === 'income') {
+                if (snack.stock < qty) {
+                    showToast(`⚠️ สต็อกไม่พอ! ขนม "${snack.name}" เหลือเพียง ${snack.stock} ถุง`, 'error');
+                    return;
+                }
+                snack.stock -= qty;
+            } else if (currentType === 'expense') {
+                snack.stock += qty;
+            }
+
+            const newTx = {
+                id: 'tx_' + Date.now(),
+                type: currentType,
+                snackId: snack.id,
+                snackName: snack.name,
+                qty: qty,
+                unitPrice: unitPrice,
+                total: qty * unitPrice,
+                paymentMethod: paymentMethod,
+                note: note,
+                datetime: datetime
+            };
+
+            transactions.unshift(newTx);
+            saveSnacks();
+            saveTransactions();
+
+            showToast(`บันทึก ${currentType === 'income' ? 'รายรับ' : 'รายจ่าย'} เรียบร้อยแล้ว`, 'success');
+
+            document.getElementById('txQty').value = 1;
+            document.getElementById('txNote').value = '';
+            setDefaultDateTime();
+            refreshAllUI();
+        }
+
+        function renderSnackInventory() {
+            const grid = document.getElementById('snackInventoryGrid');
+            const summaryPill = document.getElementById('stockSummaryPill');
+            grid.innerHTML = '';
+
+            summaryPill.textContent = `รวม ${snacks.length} ชนิด`;
+
+            if (snacks.length === 0) {
+                grid.className = "col-span-full py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200";
+                grid.innerHTML = `
+                    <div class="text-4xl mb-2">🍪</div>
+                    <p class="text-xs font-semibold text-slate-500">ยังไม่มีรายการขนมในคลัง</p>
+                    <p class="text-[11px] text-slate-400 mt-0.5">กดปุ่ม "+ เพิ่มชนิดขนมใหม่" ทางซ้ายมือเพื่อเริ่มต้นเพิ่มสินค้า</p>
+                `;
+                return;
+            }
+
+            grid.className = "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 overflow-y-auto max-h-[420px] p-1";
+
+            snacks.forEach(s => {
+                const isLowStock = s.stock < 5;
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-xl border flex flex-col justify-between transition-all relative ${
+                    isLowStock 
+                    ? 'bg-rose-50/70 border-rose-300 ring-2 ring-rose-200' 
+                    : 'bg-amber-50/30 border-amber-200 hover:border-amber-400'
+                }`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start gap-1">
+                            <h4 class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1">${s.name}</h4>
+                            ${
+                                isLowStock 
+                                ? `<span class="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse whitespace-nowrap">⚠️ ใกล้หมด</span>` 
+                                : `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap">ปกติ</span>`
+                            }
+                        </div>
+                        <div class="mt-2 flex items-baseline justify-between">
+                            <span class="text-xs text-slate-500">คงเหลือ:</span>
+                            <span class="text-lg font-extrabold ${isLowStock ? 'text-rose-600' : 'text-amber-800'}">
+                                ${s.stock} <span class="text-xs font-normal text-slate-600">ถุง</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-slate-200/60 grid grid-cols-2 text-[11px] text-slate-600">
+                        <div>ขาย: <span class="font-semibold text-emerald-700">฿${s.price}</span></div>
+                        <div class="text-right">ทุน: <span class="font-semibold text-rose-700">฿${s.cost}</span></div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('historyTableBody');
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filterType = document.getElementById('filterType').value;
+            const countText = document.getElementById('filteredCountText');
+
+            tbody.innerHTML = '';
+
+            let filtered = transactions.filter(tx => {
+                const matchesType = filterType === 'all' || tx.type === filterType;
+                const matchesSearch = tx.snackName.toLowerCase().includes(searchVal) || (tx.note && tx.note.toLowerCase().includes(searchVal));
+                return matchesType && matchesSearch;
+            });
+
+            countText.textContent = `แสดง ${filtered.length} จาก ${transactions.length} รายการ`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-10 text-slate-400">
+                            <div class="text-3xl mb-1">📋</div>
+                            <p class="text-xs font-medium text-slate-500">ยังไม่มีประวัติการบันทึกรายการ</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            filtered.forEach(tx => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-amber-50/40 transition-colors";
+
+                const isIncome = tx.type === 'income';
+                const typeBadge = isIncome 
+                    ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">🛒 รายรับ</span>`
+                    : `<span class="bg-rose-100 text-rose-800 px-2.5 py-0.5 rounded-full text-[10px] font-semibold">🚚 รายจ่าย</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-4 font-medium text-slate-600 whitespace-nowrap">${formatDateTimeTh(tx.datetime)}</td>
+                    <td class="py-2.5 px-4 whitespace-nowrap">${typeBadge}</td>
+                    <td class="py-2.5 px-4 font-bold text-slate-800">${tx.snackName}</td>
+                    <td class="py-2.5 px-4 text-right font-semibold text-slate-700">${tx.qty} ถุง</td>
+                    <td class="py-2.5 px-4 text-right text-slate-500">฿${tx.unitPrice}</td>
+                    <td class="py-2.5 px-4 text-right font-bold ${isIncome ? 'text-emerald-600' : 'text-rose-600'}">
+                        ${isIncome ? '+' : '-'}${formatCurrency(tx.total)}
+                    </td>
+                    <td class="py-2.5 px-4 text-slate-600">
+                        <span class="inline-block bg-slate-100 px-2 py-0.5 rounded text-[10px] mr-1">${tx.paymentMethod || '-'}</span>
+                        ${tx.note ? `<span class="text-slate-500 text-[11px]">${tx.note}</span>` : ''}
+                    </td>
+                    <td class="py-2.5 px-4 text-center whitespace-nowrap">
+                        <!-- Direct Clean SVG Buttons without broken icon fonts -->
+                        <button onclick="openEditTxModal('${tx.id}')" class="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors text-[11px] font-semibold mr-1 shadow-sm">
+                            <svg class="w-3.5 h-3.5 mr-1 fill-current text-amber-600" viewBox="0 0 512 512"><path d="M471.6 21.7c-21.9-21.9-57.3-21.9-79.2 0L362.3 51.7l97.9 97.9 30.1-30.1c21.9-21.9 21.9-57.3 0-79.2L471.6 21.7zm-299.2 220c-6.1 6.1-10.8 13.6-13.5 21.9l-29.6 88.8c-2.9 8.6-.6 18.1 5.8 24.6s15.9 8.7 24.6 5.8l88.8-29.6c8.2-2.7 15.7-7.4 21.9-13.5L437.7 172.3 339.7 74.3 172.4 241.7zM96 64C43 64 0 107 0 160V416c0 53 43 96 96 96H352c53 0 96-43 96-96V320c0-17.7-14.3-32-32-32s-32 14.3-32 32V416c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32H192c17.7 0 32-14.3 32-32s-14.3-32-32-32H96z"/></svg>
+                            แก้ไข
+                        </button>
+                        <button onclick="openDeleteModal('${tx.id}')" class="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors text-[11px] font-semibold shadow-sm">
+                            <svg class="w-3.5 h-3.5 mr-1 fill-current text-rose-600" viewBox="0 0 448 512"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"/></svg>
+                            ลบ
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openDeleteModal(txId) {
+            document.getElementById('deleteTxTargetId').value = txId;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            document.getElementById('deleteTxTargetId').value = '';
+        }
+
+        function executeDeleteTransaction() {
+            const txId = document.getElementById('deleteTxTargetId').value;
+            if (!txId) return;
+
+            const idx = transactions.findIndex(t => t.id === txId);
+            if (idx === -1) {
+                closeDeleteModal();
+                return;
+            }
+
+            const tx = transactions[idx];
+            const snack = snacks.find(s => s.id === tx.snackId);
+
+            if (snack) {
+                if (tx.type === 'income') {
+                    snack.stock += tx.qty;
+                } else if (tx.type === 'expense') {
+                    snack.stock = Math.max(0, snack.stock - tx.qty);
+                }
+                saveSnacks();
+            }
+
+            transactions.splice(idx, 1);
+            saveTransactions();
+            
+            closeDeleteModal();
+            showToast('ลบรายการบันทึกเรียบร้อยแล้ว', 'info');
+            refreshAllUI();
+        }
+
+        function openEditTxModal(txId) {
+            const tx = transactions.find(t => t.id === txId);
+            if (!tx) return;
+
+            document.getElementById('editTxId').value = tx.id;
+            document.getElementById('editTxDateTime').value = tx.datetime;
+            document.getElementById('editTxQty').value = tx.qty;
+            document.getElementById('editTxUnitPrice').value = tx.unitPrice;
+            document.getElementById('editTxPaymentMethod').value = tx.paymentMethod || 'เงินสด';
+            document.getElementById('editTxNote').value = tx.note || '';
+
+            const select = document.getElementById('editTxSnackId');
+            select.innerHTML = '';
+            snacks.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name;
+                select.appendChild(opt);
+            });
+            select.value = tx.snackId;
+
+            calcEditTotal();
+            document.getElementById('editTxModal').classList.remove('hidden');
+        }
+
+        function closeEditTxModal() {
+            document.getElementById('editTxModal').classList.add('hidden');
+        }
+
+        function calcEditTotal() {
+            const qty = parseFloat(document.getElementById('editTxQty').value) || 0;
+            const unitPrice = parseFloat(document.getElementById('editTxUnitPrice').value) || 0;
+            document.getElementById('editTxTotalDisplay').textContent = formatCurrency(qty * unitPrice);
+        }
+
+        function handleEditTxSubmit(e) {
+            e.preventDefault();
+
+            const txId = document.getElementById('editTxId').value;
+            const txIdx = transactions.findIndex(t => t.id === txId);
+            if (txIdx === -1) return;
+
+            const oldTx = transactions[txIdx];
+            const newSnackId = document.getElementById('editTxSnackId').value;
+            const newQty = parseInt(document.getElementById('editTxQty').value) || 0;
+            const newUnitPrice = parseFloat(document.getElementById('editTxUnitPrice').value) || 0;
+            const newMethod = document.getElementById('editTxPaymentMethod').value;
+            const newNote = document.getElementById('editTxNote').value.trim();
+            const newDateTime = document.getElementById('editTxDateTime').value;
+
+            const oldSnack = snacks.find(s => s.id === oldTx.snackId);
+            if (oldSnack) {
+                if (oldTx.type === 'income') oldSnack.stock += oldTx.qty;
+                else if (oldTx.type === 'expense') oldSnack.stock = Math.max(0, oldSnack.stock - oldTx.qty);
+            }
+
+            const newSnack = snacks.find(s => s.id === newSnackId);
+            if (!newSnack) return;
+
+            if (oldTx.type === 'income') {
+                if (newSnack.stock < newQty) {
+                    if (oldSnack) {
+                        if (oldTx.type === 'income') oldSnack.stock -= oldTx.qty;
+                        else oldSnack.stock += oldTx.qty;
+                    }
+                    showToast(`⚠️ สต็อกไม่พอสำหรับแก้ไข! มีเพียง ${newSnack.stock} ถุง`, 'error');
+                    return;
+                }
+                newSnack.stock -= newQty;
+            } else if (oldTx.type === 'expense') {
+                newSnack.stock += newQty;
+            }
+
+            transactions[txIdx] = {
+                ...oldTx,
+                snackId: newSnack.id,
+                snackName: newSnack.name,
+                qty: newQty,
+                unitPrice: newUnitPrice,
+                total: newQty * newUnitPrice,
+                paymentMethod: newMethod,
+                note: newNote,
+                datetime: newDateTime
+            };
+
+            saveSnacks();
+            saveTransactions();
+            closeEditTxModal();
+            showToast('แก้ไขข้อมูลและปรับสต็อกเรียบร้อยแล้ว', 'success');
+            refreshAllUI();
+        }
+
+        function openAddSnackModal() {
+            document.getElementById('addSnackModal').classList.remove('hidden');
+        }
+
+        function closeAddSnackModal() {
+            document.getElementById('addSnackModal').classList.add('hidden');
+            document.getElementById('addSnackForm').reset();
+        }
+
+        function handleAddSnackSubmit(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('newSnackName').value.trim();
+            const price = parseFloat(document.getElementById('newSnackPrice').value) || 0;
+            const cost = parseFloat(document.getElementById('newSnackCost').value) || 0;
+            const stock = parseInt(document.getElementById('newSnackStock').value) || 0;
+
+            if (!name) return;
+
+            const newSnack = {
+                id: 's_' + Date.now(),
+                name,
+                price,
+                cost,
+                stock
+            };
+
+            snacks.push(newSnack);
+            saveSnacks();
+            closeAddSnackModal();
+            showToast(`เพิ่มขนม "${name}" เข้าสู่ระบบเรียบร้อยแล้ว`, 'success');
+            refreshAllUI();
+        }
+
+        function copyLineSummary() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const todayTx = transactions.filter(t => t.datetime && t.datetime.startsWith(todayStr));
+
+            let totalIncome = 0;
+            let cash = 0;
+            let transfer = 0;
+            let totalExpense = 0;
+
+            // รวบรวมสรุปขนมที่ขายได้รายชิ้นของวันนี้
+            const snackSalesMap = {};
+
+            todayTx.forEach(t => {
+                if (t.type === 'income') {
+                    totalIncome += t.total;
+                    if (t.paymentMethod === 'เงินสด') cash += t.total;
+                    else transfer += t.total;
+
+                    if (!snackSalesMap[t.snackName]) {
+                        snackSalesMap[t.snackName] = { qty: 0, total: 0 };
+                    }
+                    snackSalesMap[t.snackName].qty += t.qty;
+                    snackSalesMap[t.snackName].total += t.total;
+                } else if (t.type === 'expense') {
+                    totalExpense += t.total;
+                }
+            });
+
+            const netProfit = totalIncome - totalExpense;
+            const dateFormatted = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
+
+            // สร้างข้อความรายการขนมที่ขายได้
+            let snackDetailText = '';
+            const soldNames = Object.keys(snackSalesMap);
+            if (soldNames.length > 0) {
+                snackDetailText = soldNames.map(name => {
+                    const item = snackSalesMap[name];
+                    return `  • ${name}: ${item.qty} ถุง (฿${item.total.toLocaleString()})`;
+                }).join('\n');
+            } else {
+                snackDetailText = '  (ไม่มีรายการขายวันนี้)';
+            }
+
+            const summaryText = `🍪 สรุปยอดขายร้านขนมถุงประจำวัน
+📅 วันที่: ${dateFormatted}
+-----------------------------
+🛍️ รายการขนมที่ขายได้วันนี้:
+${snackDetailText}
+-----------------------------
+💰 ยอดขายรวม (รายรับ): ฿${totalIncome.toLocaleString()}
+💵 - เงินสด: ฿${cash.toLocaleString()}
+📱 - เงินโอน: ฿${transfer.toLocaleString()}
+📦 รายจ่าย (ต้นทุน): ฿${totalExpense.toLocaleString()}
+-----------------------------
+✨ กำไรสุทธิประจำวัน: ฿${netProfit.toLocaleString()}
+-----------------------------
+(ส่งจากระบบจัดการร้านขนมถุง)`;
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = summaryText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('คัดลอกสรุปยอดขายพร้อมรายละเอียดขนมเรียบร้อย! นำไปวางใน LINE ได้ทันที', 'success');
+        }
+
+        function populateMonthDropdown() {
+            const select = document.getElementById('monthlySelect');
+            const currentVal = select.value;
+            select.innerHTML = '';
+
+            const monthSet = new Set();
+            const now = new Date();
+            const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            monthSet.add(currentYM);
+
+            transactions.forEach(t => {
+                if (t.datetime) {
+                    monthSet.add(t.datetime.slice(0, 7));
+                }
+            });
+
+            const sortedMonths = Array.from(monthSet).sort().reverse();
+
+            sortedMonths.forEach(ym => {
+                const [y, m] = ym.split('-');
+                const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
+                const monthName = dateObj.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+                
+                const opt = document.createElement('option');
+                opt.value = ym;
+                opt.textContent = monthName;
+                select.appendChild(opt);
+            });
+
+            if (currentVal && sortedMonths.includes(currentVal)) {
+                select.value = currentVal;
+            } else {
+                select.value = currentYM;
+            }
+        }
+
+        function renderMonthlyStats() {
+            const selectedYM = document.getElementById('monthlySelect').value;
+            if (!selectedYM) return;
+
+            const monthTx = transactions.filter(t => t.datetime && t.datetime.startsWith(selectedYM));
+
+            let mIncome = 0;
+            let mCash = 0;
+            let mTransfer = 0;
+            let mExpense = 0;
+
+            const snackSalesMap = {};
+            const snackQtyMap = {};
+
+            monthTx.forEach(t => {
+                if (t.type === 'income') {
+                    mIncome += t.total;
+                    if (t.paymentMethod === 'เงินสด') mCash += t.total;
+                    else mTransfer += t.total;
+
+                    snackSalesMap[t.snackName] = (snackSalesMap[t.snackName] || 0) + t.total;
+                    snackQtyMap[t.snackName] = (snackQtyMap[t.snackName] || 0) + t.qty;
+                } else if (t.type === 'expense') {
+                    mExpense += t.total;
+                }
+            });
+
+            const mProfit = mIncome - mExpense;
+
+            document.getElementById('mIncomeTotal').textContent = formatCurrency(mIncome);
+            document.getElementById('mCashTotal').textContent = formatCurrency(mCash);
+            document.getElementById('mTransferTotal').textContent = formatCurrency(mTransfer);
+            document.getElementById('mExpenseTotal').textContent = formatCurrency(mExpense);
+            document.getElementById('mNetProfit').textContent = formatCurrency(mProfit);
+
+            renderChart(snackSalesMap);
+            renderTopSellingList(snackQtyMap, snackSalesMap);
+        }
+
+        function renderChart(snackSalesMap) {
+            const ctx = document.getElementById('salesDoughnutChart').getContext('2d');
+            const labels = Object.keys(snackSalesMap);
+            const data = Object.values(snackSalesMap);
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            if (labels.length === 0) {
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['ยังไม่มีข้อมูลขาย'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e2e8f0']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
+                });
+                return;
+            }
+
+            const backgroundColors = [
+                '#f59e0b', '#f472b6', '#10b981', '#06b6d4', '#8b5cf6',
+                '#f97316', '#ec4899', '#3b82f6', '#84cc16'
+            ];
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColors.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { family: 'Prompt', size: 10 },
+                                boxWidth: 12
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ฿${context.raw.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderTopSellingList(qtyMap, salesMap) {
+            const container = document.getElementById('topSellingList');
+            container.innerHTML = '';
+
+            const sortedSnacks = Object.keys(qtyMap).sort((a, b) => qtyMap[b] - qtyMap[a]);
+
+            if (sortedSnacks.length === 0) {
+                container.innerHTML = '<p class="text-xs text-slate-400 italic py-4 text-center">ยังไม่มีข้อมูลขายในเดือนนี้</p>';
+                return;
+            }
+
+            sortedSnacks.slice(0, 4).forEach((name, idx) => {
+                const qty = qtyMap[name];
+                const revenue = salesMap[name] || 0;
+
+                const medalColors = [
+                    'bg-amber-400 text-white',
+                    'bg-slate-300 text-slate-700',
+                    'bg-amber-600 text-white',
+                    'bg-slate-100 text-slate-600'
+                ];
+
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs";
+                item.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-6 h-6 rounded-full ${medalColors[idx] || medalColors[3]} flex items-center justify-center font-bold text-[11px]">
+                            ${idx + 1}
+                        </span>
+                        <div>
+                            <p class="font-bold text-slate-800">${name}</p>
+                            <p class="text-[10px] text-slate-500">ยอดขายรวม ${formatCurrency(revenue)}</p>
+                        </div>
+                    </div>
+                    <div class="text-right font-extrabold text-amber-700">
+                        ${qty} <span class="text-[10px] font-normal text-slate-500">ถุง</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+    </script>
+</body>
+</html>
